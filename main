@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -11,35 +12,36 @@ local toolNames = {
     ["Pruning Shears"] = Enum.KeyCode.G,
 }
 
--- Keep track of which tools have the loop enabled
+-- Track toggle status for each tool
 local loopEnabledForTool = {}
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ToolLoopStatusGui"
+screenGui.ResetOnSpawn = false
 screenGui.Parent = PlayerGui
 
--- Create a frame to hold all labels
+-- Create frame to hold labels
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, #toolNames * 25 + 10)
+frame.Size = UDim2.new(0, 250, 0, #toolNames * 25 + 10)
 frame.Position = UDim2.new(0, 10, 0, 10)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0.3
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
--- Add a UIListLayout to arrange labels vertically
-local listLayout = Instance.new("UIListLayout")
-listLayout.Parent = frame
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.Padding = UDim.new(0, 5)
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = frame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 5)
 
--- Create label for each tool to display status
+-- Create label for each tool
 local statusLabels = {}
-for toolName, keyCode in pairs(toolNames) do
+for toolName, _ in pairs(toolNames) do
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 0, 20)
     label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
     label.Font = Enum.Font.SourceSans
     label.TextSize = 18
     label.TextXAlignment = Enum.TextXAlignment.Left
@@ -50,13 +52,13 @@ for toolName, keyCode in pairs(toolNames) do
     loopEnabledForTool[toolName] = false
 end
 
--- Function to toggle a specific tool's loop
+-- Toggle function updates label text
 local function ToggleLoopForTool(toolName)
     loopEnabledForTool[toolName] = not loopEnabledForTool[toolName]
     statusLabels[toolName].Text = toolName .. ": " .. (loopEnabledForTool[toolName] and "ON" or "OFF")
 end
 
--- Input listener to toggle the loops
+-- Listen for key presses
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     for toolName, keyCode in pairs(toolNames) do
@@ -67,18 +69,23 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Main loop to fire remote events for enabled tools
+-- Loop that fires the remote for enabled tools
 spawn(function()
     while true do
         for toolName, enabled in pairs(loopEnabledForTool) do
             if enabled then
-                local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(toolName)
-                if tool then
-                    local args = {
-                        [1] = tool,
-                        [2] = false
-                    }
-                    workspace.Remotes.UseItem:FireServer(unpack(args))
+                local char = LocalPlayer.Character
+                if char then
+                    local tool = char:FindFirstChild(toolName)
+                    if tool then
+                        local args = {
+                            [1] = tool,
+                            [2] = false
+                        }
+                        if workspace:FindFirstChild("Remotes") and workspace.Remotes:FindFirstChild("UseItem") then
+                            workspace.Remotes.UseItem:FireServer(unpack(args))
+                        end
+                    end
                 end
             end
         end
