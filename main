@@ -1,18 +1,70 @@
--- Load Kavo UI
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptco/UILib/main/KavoUI.lua"))()
-local Window = Library.CreateLib("Tool Utilities", "Sentinel")
-
-local Tab = Window:NewTab("Automation")
-local Section = Tab:NewSection("Tool Controls")
-
--- Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local toolsFolder = workspace:WaitForChild("CrimsonsMoons")
 
--- HITBOX EXTENDER
+-- ======== GUI SETUP ========
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ToolToggleGUI"
+screenGui.Parent = PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 320, 0, 220)
+frame.Position = UDim2.new(0, 10, 0, 10)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "Tool Automation & Hitbox Extender"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.Parent = frame
+
+-- Big Hitbox toggle button
+local hitboxToggleBtn = Instance.new("TextButton")
+hitboxToggleBtn.Size = UDim2.new(1, -20, 0, 40)
+hitboxToggleBtn.Position = UDim2.new(0, 10, 0, 40)
+hitboxToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+hitboxToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+hitboxToggleBtn.Font = Enum.Font.SourceSans
+hitboxToggleBtn.TextSize = 18
+hitboxToggleBtn.Text = "Toggle Big Hitboxes: OFF"
+hitboxToggleBtn.Parent = frame
+
+-- Tool Automation toggle button
+local automationToggleBtn = Instance.new("TextButton")
+automationToggleBtn.Size = UDim2.new(1, -20, 0, 40)
+automationToggleBtn.Position = UDim2.new(0, 10, 0, 90)
+automationToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+automationToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+automationToggleBtn.Font = Enum.Font.SourceSans
+automationToggleBtn.TextSize = 18
+automationToggleBtn.Text = "Toggle Tool Automation: OFF"
+automationToggleBtn.Parent = frame
+
+-- Status label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -20, 0, 80)
+statusLabel.Position = UDim2.new(0, 10, 0, 140)
+statusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+statusLabel.BorderSizePixel = 0
+statusLabel.TextColor3 = Color3.new(1, 1, 1)
+statusLabel.Font = Enum.Font.Code
+statusLabel.TextSize = 16
+statusLabel.TextWrapped = true
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+statusLabel.Text = "Press R,T,Y,F,G to toggle tools ON/OFF\nTool status will appear here."
+statusLabel.Parent = frame
+
+-- ======== LOGIC ========
+
+-- Hitbox extender
 local runningHitbox = false
 local hitboxConnection
 
@@ -24,7 +76,6 @@ local function resizeHitbox(tool)
         hitbox.CanCollide = false
         hitbox.Anchored = true
         hitbox.Transparency = 0.7
-        -- print("Resized hitbox for tool:", tool.Name)
     end
 end
 
@@ -37,17 +88,17 @@ local function setHitboxRunning(state)
         hitboxConnection = toolsFolder.ChildAdded:Connect(function(tool)
             resizeHitbox(tool)
         end)
-        print("Hitbox extender: ON")
+        hitboxToggleBtn.Text = "Toggle Big Hitboxes: ON"
     else
         if hitboxConnection then
             hitboxConnection:Disconnect()
             hitboxConnection = nil
         end
-        print("Hitbox extender: OFF")
+        hitboxToggleBtn.Text = "Toggle Big Hitboxes: OFF"
     end
 end
 
--- TOOL AUTOMATION
+-- Tool automation
 local toolKeybinds = {
     ["Clockwork Hammer"] = Enum.KeyCode.R,
     ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
@@ -61,33 +112,7 @@ for toolName in pairs(toolKeybinds) do
     toolToggleStates[toolName] = false
 end
 
--- Status GUI (in PlayerGui)
-local screenGui = PlayerGui:FindFirstChild("ToolToggleStatus")
-if not screenGui then
-    screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ToolToggleStatus"
-    screenGui.ResetOnSpawn = false
-    screenGui.IgnoreGuiInset = true
-    screenGui.Parent = PlayerGui
-
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Name = "StatusLabel"
-    statusLabel.Size = UDim2.new(0, 300, 0, 180)
-    statusLabel.Position = UDim2.new(0, 10, 0, 10)
-    statusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    statusLabel.BackgroundTransparency = 0.2
-    statusLabel.BorderSizePixel = 0
-    statusLabel.TextColor3 = Color3.new(1, 1, 1)
-    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-    statusLabel.TextYAlignment = Enum.TextYAlignment.Top
-    statusLabel.Font = Enum.Font.Code
-    statusLabel.TextSize = 16
-    statusLabel.RichText = true
-    statusLabel.TextWrapped = true
-    statusLabel.Text = "Tool Status"
-    statusLabel.Parent = screenGui
-end
-local statusLabel = screenGui:WaitForChild("StatusLabel")
+local runningToolAutomation = false
 
 local function updateStatusText()
     local lines = {}
@@ -99,23 +124,10 @@ local function updateStatusText()
 end
 updateStatusText()
 
--- Listen for key presses to toggle tools
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    for toolName, keyCode in pairs(toolKeybinds) do
-        if input.KeyCode == keyCode then
-            toolToggleStates[toolName] = not toolToggleStates[toolName]
-            updateStatusText()
-        end
-    end
-end)
-
-local runningToolAutomation = false
-
 local function setToolAutomation(state)
     runningToolAutomation = state
     if runningToolAutomation then
-        print("Tool automation: ON")
+        automationToggleBtn.Text = "Toggle Tool Automation: ON"
         task.spawn(function()
             while runningToolAutomation do
                 local character = LocalPlayer.Character
@@ -137,15 +149,26 @@ local function setToolAutomation(state)
             end
         end)
     else
-        print("Tool automation: OFF")
+        automationToggleBtn.Text = "Toggle Tool Automation: OFF"
     end
 end
 
--- Kavo GUI toggles
-Section:NewToggle("Toggle Big Hitboxes", "Make all tool hitboxes huge and update new ones", function(value)
-    setHitboxRunning(value)
+-- Button clicks
+hitboxToggleBtn.MouseButton1Click:Connect(function()
+    setHitboxRunning(not runningHitbox)
 end)
 
-Section:NewToggle("Toggle Tool Automation", "Automatically use toggled tools with keybinds", function(value)
-    setToolAutomation(value)
+automationToggleBtn.MouseButton1Click:Connect(function()
+    setToolAutomation(not runningToolAutomation)
+end)
+
+-- Keybind toggle for tools
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    for toolName, keyCode in pairs(toolKeybinds) do
+        if input.KeyCode == keyCode then
+            toolToggleStates[toolName] = not toolToggleStates[toolName]
+            updateStatusText()
+        end
+    end
 end)
