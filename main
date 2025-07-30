@@ -1,13 +1,14 @@
 -- Load Kavo UI
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptco/KnifeHub/main/UILib.lua"))()
-local Window = Library.CreateLib("StudLand V2 - Keybind Loops", "Ocean")
+local Window = Library.CreateLib("StudLand V2 - Tool Keybinds", "Ocean")
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
--- Tool keybind mappings
+-- Tool + keybind mapping
 local toolKeybinds = {
     ["Clockwork Hammer"] = Enum.KeyCode.R,
     ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
@@ -16,22 +17,23 @@ local toolKeybinds = {
     ["Pruning Shears"] = Enum.KeyCode.G,
 }
 
--- Status tracking
+-- State tracking
 local loopStates = {}
 local labelReferences = {}
 
--- GUI setup
-local tab = Window:NewTab("Tool Keybinds")
-local section = tab:NewSection("Status by Hotkey")
+-- Create GUI tab and section
+local tab = Window:NewTab("Hotkey Loops")
+local section = tab:NewSection("Tool Statuses")
 
-for toolName, key in pairs(toolKeybinds) do
+-- Create labels for each tool
+for toolName, keyCode in pairs(toolKeybinds) do
     loopStates[toolName] = false
-    labelReferences[toolName] = section:NewLabel(toolName .. ": [DISABLED] (Key: " .. key.Name .. ")")
+    labelReferences[toolName] = section:NewLabel(toolName .. ": [DISABLED] (Key: " .. keyCode.Name .. ")")
 end
 
--- Keybind logic
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
+-- Handle input
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
 
     for toolName, keyCode in pairs(toolKeybinds) do
         if input.KeyCode == keyCode then
@@ -42,15 +44,17 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Loop executor
+-- Loop logic
 task.spawn(function()
     while true do
-        for toolName, isActive in pairs(loopStates) do
-            if isActive then
-                local char = LocalPlayer.Character
-                local tool = char and char:FindFirstChild(toolName)
-                if tool then
-                    workspace.Remotes.UseItem:FireServer(tool, false)
+        local char = LocalPlayer.Character
+        if char then
+            for toolName, enabled in pairs(loopStates) do
+                if enabled then
+                    local tool = char:FindFirstChild(toolName)
+                    if tool then
+                        workspace.Remotes.UseItem:FireServer(tool, false)
+                    end
                 end
             end
         end
