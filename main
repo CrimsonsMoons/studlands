@@ -1,10 +1,11 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Tool names and their corresponding keybinds
+-- === TOOL BINDINGS ===
 local toolKeybinds = {
     ["Clockwork Hammer"] = Enum.KeyCode.R,
     ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
@@ -13,27 +14,57 @@ local toolKeybinds = {
     ["Pruning Shears"] = Enum.KeyCode.G,
 }
 
--- Toggle state for each tool
+-- === TOGGLE STATES ===
 local toolToggleStates = {}
-
--- Initialize toggle states
 for toolName in pairs(toolKeybinds) do
     toolToggleStates[toolName] = false
 end
 
--- Handle input to toggle tools
+-- === GUI SETUP ===
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ToolToggleStatus"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0, 250, 0, 200)
+statusLabel.Position = UDim2.new(0, 10, 0, 10)
+statusLabel.BackgroundTransparency = 0.3
+statusLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+statusLabel.Font = Enum.Font.Code
+statusLabel.TextSize = 16
+statusLabel.RichText = true
+statusLabel.TextWrapped = true
+statusLabel.Parent = screenGui
+
+-- === FUNCTION TO UPDATE STATUS TEXT ===
+local function updateStatusText()
+    local lines = {}
+    for toolName, isEnabled in pairs(toolToggleStates) do
+        local color = isEnabled and "00ff00" or "ff0000"
+        table.insert(lines, `<font color="#{color}">{toolName}: {isEnabled and "ON" or "OFF"}</font>`)
+    end
+    statusLabel.Text = table.concat(lines, "\n")
+end
+
+updateStatusText()
+
+-- === KEYBIND LISTENER ===
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
 
     for toolName, keyCode in pairs(toolKeybinds) do
         if input.KeyCode == keyCode then
             toolToggleStates[toolName] = not toolToggleStates[toolName]
-            print(`[Toggle] {toolName} is now {toolToggleStates[toolName] and "ON" or "OFF"}`)
+            updateStatusText()
         end
     end
 end)
 
--- Loop through all tools and use the enabled ones
+-- === MAIN TOOL LOOP ===
 while true do
     for toolName, isEnabled in pairs(toolToggleStates) do
         if isEnabled then
