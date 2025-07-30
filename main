@@ -15,18 +15,16 @@ local toolNames = {
 -- Track toggle status for each tool
 local loopEnabledForTool = {}
 
--- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ToolLoopStatusGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = PlayerGui
 
--- Create frame to hold labels
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 250, 0, #toolNames * 25 + 10)
 frame.Position = UDim2.new(0, 10, 0, 10)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BackgroundTransparency = 0.3
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BackgroundTransparency = 0.2
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
@@ -35,13 +33,12 @@ UIListLayout.Parent = frame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 5)
 
--- Create label for each tool
 local statusLabels = {}
 for toolName, _ in pairs(toolNames) do
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 0, 20)
     label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.Font = Enum.Font.SourceSans
     label.TextSize = 18
     label.TextXAlignment = Enum.TextXAlignment.Left
@@ -52,13 +49,11 @@ for toolName, _ in pairs(toolNames) do
     loopEnabledForTool[toolName] = false
 end
 
--- Toggle function updates label text
 local function ToggleLoopForTool(toolName)
     loopEnabledForTool[toolName] = not loopEnabledForTool[toolName]
     statusLabels[toolName].Text = toolName .. ": " .. (loopEnabledForTool[toolName] and "ON" or "OFF")
 end
 
--- Listen for key presses
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     for toolName, keyCode in pairs(toolNames) do
@@ -69,7 +64,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Loop that fires the remote for enabled tools
+-- Run loop to fire remote for enabled tools
 spawn(function()
     while true do
         for toolName, enabled in pairs(loopEnabledForTool) do
@@ -78,12 +73,8 @@ spawn(function()
                 if char then
                     local tool = char:FindFirstChild(toolName)
                     if tool then
-                        local args = {
-                            [1] = tool,
-                            [2] = false
-                        }
                         if workspace:FindFirstChild("Remotes") and workspace.Remotes:FindFirstChild("UseItem") then
-                            workspace.Remotes.UseItem:FireServer(unpack(args))
+                            workspace.Remotes.UseItem:FireServer(tool, false)
                         end
                     end
                 end
