@@ -1,5 +1,12 @@
--- Make sure this is in a LocalScript under StarterPlayerScripts or StarterGui!
+-- Load Kavo UI (if not already loaded)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptco/UILib/main/KavoUI.lua"))()
+local Window = Library.CreateLib("Tool Toggler", "Sentinel")
 
+-- Tab & Section
+local Tab = Window:NewTab("Automation")
+local Section = Tab:NewSection("Tool Toggler")
+
+-- Roblox services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -7,7 +14,7 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- === TOOL BINDINGS ===
+-- Tool keybinds
 local toolKeybinds = {
     ["Clockwork Hammer"] = Enum.KeyCode.R,
     ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
@@ -16,13 +23,13 @@ local toolKeybinds = {
     ["Pruning Shears"] = Enum.KeyCode.G,
 }
 
--- === TOGGLE STATES ===
+-- Tool toggle states
 local toolToggleStates = {}
 for toolName in pairs(toolKeybinds) do
     toolToggleStates[toolName] = false
 end
 
--- === GUI SETUP ===
+-- Status GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ToolToggleStatus"
 screenGui.ResetOnSpawn = false
@@ -46,7 +53,7 @@ statusLabel.TextWrapped = true
 statusLabel.Text = "Tool Status"
 statusLabel.Parent = screenGui
 
--- === FUNCTION TO UPDATE STATUS TEXT ===
+-- Update tool GUI
 local function updateStatusText()
     local lines = {}
     for toolName, isEnabled in pairs(toolToggleStates) do
@@ -58,10 +65,9 @@ end
 
 updateStatusText()
 
--- === KEYBIND LISTENER ===
+-- Keybind input toggle
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-
     for toolName, keyCode in pairs(toolKeybinds) do
         if input.KeyCode == keyCode then
             toolToggleStates[toolName] = not toolToggleStates[toolName]
@@ -70,22 +76,35 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- === MAIN LOOP TO USE TOOLS ===
-while true do
-    for toolName, isEnabled in pairs(toolToggleStates) do
-        if isEnabled then
-            local character = LocalPlayer.Character
-            if character then
-                local tool = character:FindFirstChild(toolName)
-                if tool then
-                    local args = {
-                        [1] = tool,
-                        [2] = false
-                    }
-                    workspace.Remotes.UseItem:FireServer(unpack(args))
+-- Toggle state
+local running = false
+
+-- Toggle button in GUI
+Section:NewButton("Toggle Tool Automation", "Turns tool usage loop ON/OFF", function()
+    running = not running
+    if running then
+        print("Tool automation: ON")
+        task.spawn(function()
+            while running do
+                for toolName, isEnabled in pairs(toolToggleStates) do
+                    if isEnabled then
+                        local character = LocalPlayer.Character
+                        if character then
+                            local tool = character:FindFirstChild(toolName)
+                            if tool then
+                                local args = {
+                                    [1] = tool,
+                                    [2] = false
+                                }
+                                workspace.Remotes.UseItem:FireServer(unpack(args))
+                            end
+                        end
+                    end
                 end
+                task.wait(0.1)
             end
-        end
+        end)
+    else
+        print("Tool automation: OFF")
     end
-    task.wait(0.1)
-end
+end)
