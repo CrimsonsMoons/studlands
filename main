@@ -1,9 +1,11 @@
+-- Make sure this is in a LocalScript under StarterPlayerScripts or StarterGui!
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- === TOOL BINDINGS ===
 local toolKeybinds = {
@@ -24,20 +26,24 @@ end
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ToolToggleStatus"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = PlayerGui
 
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(0, 250, 0, 200)
+statusLabel.Name = "StatusLabel"
+statusLabel.Size = UDim2.new(0, 300, 0, 180)
 statusLabel.Position = UDim2.new(0, 10, 0, 10)
-statusLabel.BackgroundTransparency = 0.3
-statusLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+statusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+statusLabel.BackgroundTransparency = 0.2
+statusLabel.BorderSizePixel = 0
+statusLabel.TextColor3 = Color3.new(1, 1, 1)
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.TextYAlignment = Enum.TextYAlignment.Top
 statusLabel.Font = Enum.Font.Code
 statusLabel.TextSize = 16
 statusLabel.RichText = true
 statusLabel.TextWrapped = true
+statusLabel.Text = "Tool Status"
 statusLabel.Parent = screenGui
 
 -- === FUNCTION TO UPDATE STATUS TEXT ===
@@ -64,7 +70,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- === MAIN TOOL LOOP ===
+-- === MAIN LOOP TO USE TOOLS ===
 while true do
     for toolName, isEnabled in pairs(toolToggleStates) do
         if isEnabled then
