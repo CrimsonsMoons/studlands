@@ -5,15 +5,16 @@ local Window = Library.CreateLib("Tool Utilities", "Sentinel")
 local Tab = Window:NewTab("Automation")
 local Section = Tab:NewSection("Tool Controls")
 
+-- Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local toolsFolder = workspace:WaitForChild("CrimsonsMoons")
 
--- TOOL HITBOX EXTENDER SETUP
+-- HITBOX EXTENDER
 local runningHitbox = false
-local hitboxConnection = nil
+local hitboxConnection
 
 local function resizeHitbox(tool)
     local hitbox = tool:FindFirstChild("Hitbox")
@@ -46,9 +47,7 @@ local function setHitboxRunning(state)
     end
 end
 
--- TOOL USE AUTOMATION SETUP
-
--- Keybinds for toggling tool auto-use
+-- TOOL AUTOMATION
 local toolKeybinds = {
     ["Clockwork Hammer"] = Enum.KeyCode.R,
     ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
@@ -62,7 +61,7 @@ for toolName in pairs(toolKeybinds) do
     toolToggleStates[toolName] = false
 end
 
--- Status GUI for tool toggles
+-- Status GUI (in PlayerGui)
 local screenGui = PlayerGui:FindFirstChild("ToolToggleStatus")
 if not screenGui then
     screenGui = Instance.new("ScreenGui")
@@ -88,7 +87,6 @@ if not screenGui then
     statusLabel.Text = "Tool Status"
     statusLabel.Parent = screenGui
 end
-
 local statusLabel = screenGui:WaitForChild("StatusLabel")
 
 local function updateStatusText()
@@ -99,10 +97,9 @@ local function updateStatusText()
     end
     statusLabel.Text = table.concat(lines, "\n")
 end
-
 updateStatusText()
 
--- Listen for keybind toggles
+-- Listen for key presses to toggle tools
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     for toolName, keyCode in pairs(toolKeybinds) do
@@ -121,10 +118,10 @@ local function setToolAutomation(state)
         print("Tool automation: ON")
         task.spawn(function()
             while runningToolAutomation do
-                for toolName, isEnabled in pairs(toolToggleStates) do
-                    if isEnabled then
-                        local character = LocalPlayer.Character
-                        if character then
+                local character = LocalPlayer.Character
+                if character then
+                    for toolName, isEnabled in pairs(toolToggleStates) do
+                        if isEnabled then
                             local tool = character:FindFirstChild(toolName)
                             if tool then
                                 local args = {
@@ -144,11 +141,11 @@ local function setToolAutomation(state)
     end
 end
 
--- Kavo GUI Toggles for both features
+-- Kavo GUI toggles
 Section:NewToggle("Toggle Big Hitboxes", "Make all tool hitboxes huge and update new ones", function(value)
     setHitboxRunning(value)
 end)
 
-Section:NewToggle("Toggle Tool Automation", "Automatically use toggled tools (keybind toggle)", function(value)
+Section:NewToggle("Toggle Tool Automation", "Automatically use toggled tools with keybinds", function(value)
     setToolAutomation(value)
 end)
