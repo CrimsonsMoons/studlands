@@ -1,21 +1,9 @@
--- Load Kavo UI (if not already loaded)
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptco/UILib/main/KavoUI.lua"))()
-local Window = Library.CreateLib("Tool Toggler", "Sentinel")
-
--- Tab & Section
-local Tab = Window:NewTab("Automation")
-local Section = Tab:NewSection("Tool Toggler")
-
--- Roblox services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Tool keybinds
-local toolKeybinds = {
+local toolNames = {
     ["Clockwork Hammer"] = Enum.KeyCode.R,
     ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
     ["Steel Axe"] = Enum.KeyCode.Y,
@@ -23,88 +11,77 @@ local toolKeybinds = {
     ["Pruning Shears"] = Enum.KeyCode.G,
 }
 
--- Tool toggle states
-local toolToggleStates = {}
-for toolName in pairs(toolKeybinds) do
-    toolToggleStates[toolName] = false
-end
+-- Keep track of which tools have the loop enabled
+local loopEnabledForTool = {}
 
--- Status GUI
+-- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ToolToggleStatus"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
+screenGui.Name = "ToolLoopStatusGui"
 screenGui.Parent = PlayerGui
 
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "StatusLabel"
-statusLabel.Size = UDim2.new(0, 300, 0, 180)
-statusLabel.Position = UDim2.new(0, 10, 0, 10)
-statusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-statusLabel.BackgroundTransparency = 0.2
-statusLabel.BorderSizePixel = 0
-statusLabel.TextColor3 = Color3.new(1, 1, 1)
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.TextYAlignment = Enum.TextYAlignment.Top
-statusLabel.Font = Enum.Font.Code
-statusLabel.TextSize = 16
-statusLabel.RichText = true
-statusLabel.TextWrapped = true
-statusLabel.Text = "Tool Status"
-statusLabel.Parent = screenGui
+-- Create a frame to hold all labels
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 200, 0, #toolNames * 25 + 10)
+frame.Position = UDim2.new(0, 10, 0, 10)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
 
--- Update tool GUI
-local function updateStatusText()
-    local lines = {}
-    for toolName, isEnabled in pairs(toolToggleStates) do
-        local color = isEnabled and "00ff00" or "ff0000"
-        table.insert(lines, `<font color="#{color}">{toolName}: {isEnabled and "ON" or "OFF"}</font>`)
-    end
-    statusLabel.Text = table.concat(lines, "\n")
+-- Add a UIListLayout to arrange labels vertically
+local listLayout = Instance.new("UIListLayout")
+listLayout.Parent = frame
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 5)
+
+-- Create label for each tool to display status
+local statusLabels = {}
+for toolName, keyCode in pairs(toolNames) do
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 18
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Text = toolName .. ": OFF"
+    label.Parent = frame
+
+    statusLabels[toolName] = label
+    loopEnabledForTool[toolName] = false
 end
 
-updateStatusText()
+-- Function to toggle a specific tool's loop
+local function ToggleLoopForTool(toolName)
+    loopEnabledForTool[toolName] = not loopEnabledForTool[toolName]
+    statusLabels[toolName].Text = toolName .. ": " .. (loopEnabledForTool[toolName] and "ON" or "OFF")
+end
 
--- Keybind input toggle
+-- Input listener to toggle the loops
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    for toolName, keyCode in pairs(toolKeybinds) do
+    for toolName, keyCode in pairs(toolNames) do
         if input.KeyCode == keyCode then
-            toolToggleStates[toolName] = not toolToggleStates[toolName]
-            updateStatusText()
+            ToggleLoopForTool(toolName)
+            print("Loop for", toolName, "toggled", loopEnabledForTool[toolName] and "on" or "off")
         end
     end
 end)
 
--- Toggle state
-local running = false
-
--- Toggle button in GUI
-Section:NewButton("Toggle Tool Automation", "Turns tool usage loop ON/OFF", function()
-    running = not running
-    if running then
-        print("Tool automation: ON")
-        task.spawn(function()
-            while running do
-                for toolName, isEnabled in pairs(toolToggleStates) do
-                    if isEnabled then
-                        local character = LocalPlayer.Character
-                        if character then
-                            local tool = character:FindFirstChild(toolName)
-                            if tool then
-                                local args = {
-                                    [1] = tool,
-                                    [2] = false
-                                }
-                                workspace.Remotes.UseItem:FireServer(unpack(args))
-                            end
-                        end
-                    end
+-- Main loop to fire remote events for enabled tools
+spawn(function()
+    while true do
+        for toolName, enabled in pairs(loopEnabledForTool) do
+            if enabled then
+                local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(toolName)
+                if tool then
+                    local args = {
+                        [1] = tool,
+                        [2] = false
+                    }
+                    workspace.Remotes.UseItem:FireServer(unpack(args))
                 end
-                task.wait(0.1)
             end
-        end)
-    else
-        print("Tool automation: OFF")
+        end
+        wait(0.1)
     end
 end)
