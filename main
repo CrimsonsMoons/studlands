@@ -1,104 +1,8 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local toolsFolder = workspace:WaitForChild("CrimsonsMoons")
 
--- ======== GUI SETUP ========
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ToolToggleGUI"
-screenGui.Parent = PlayerGui
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 320, 0, 220)
-frame.Position = UDim2.new(0, 10, 0, 10)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BorderSizePixel = 0
-frame.Parent = screenGui
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundTransparency = 1
-title.Text = "Tool Automation & Hitbox Extender"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 20
-title.Parent = frame
-
--- Big Hitbox toggle button
-local hitboxToggleBtn = Instance.new("TextButton")
-hitboxToggleBtn.Size = UDim2.new(1, -20, 0, 40)
-hitboxToggleBtn.Position = UDim2.new(0, 10, 0, 40)
-hitboxToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-hitboxToggleBtn.TextColor3 = Color3.new(1, 1, 1)
-hitboxToggleBtn.Font = Enum.Font.SourceSans
-hitboxToggleBtn.TextSize = 18
-hitboxToggleBtn.Text = "Toggle Big Hitboxes: OFF"
-hitboxToggleBtn.Parent = frame
-
--- Tool Automation toggle button
-local automationToggleBtn = Instance.new("TextButton")
-automationToggleBtn.Size = UDim2.new(1, -20, 0, 40)
-automationToggleBtn.Position = UDim2.new(0, 10, 0, 90)
-automationToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-automationToggleBtn.TextColor3 = Color3.new(1, 1, 1)
-automationToggleBtn.Font = Enum.Font.SourceSans
-automationToggleBtn.TextSize = 18
-automationToggleBtn.Text = "Toggle Tool Automation: OFF"
-automationToggleBtn.Parent = frame
-
--- Status label
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, -20, 0, 80)
-statusLabel.Position = UDim2.new(0, 10, 0, 140)
-statusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-statusLabel.BorderSizePixel = 0
-statusLabel.TextColor3 = Color3.new(1, 1, 1)
-statusLabel.Font = Enum.Font.Code
-statusLabel.TextSize = 16
-statusLabel.TextWrapped = true
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.TextYAlignment = Enum.TextYAlignment.Top
-statusLabel.Text = "Press R,T,Y,F,G to toggle tools ON/OFF\nTool status will appear here."
-statusLabel.Parent = frame
-
--- ======== LOGIC ========
-
--- Hitbox extender
-local runningHitbox = false
-local hitboxConnection
-
-local function resizeHitbox(tool)
-    local hitbox = tool:FindFirstChild("Hitbox")
-    if hitbox and hitbox:IsA("BasePart") then
-        hitbox.Size = Vector3.new(50, 50, 50)
-        hitbox.CFrame = tool.CFrame
-        hitbox.CanCollide = false
-        hitbox.Anchored = true
-        hitbox.Transparency = 0.7
-    end
-end
-
-local function setHitboxRunning(state)
-    runningHitbox = state
-    if runningHitbox then
-        for _, tool in pairs(toolsFolder:GetChildren()) do
-            resizeHitbox(tool)
-        end
-        hitboxConnection = toolsFolder.ChildAdded:Connect(function(tool)
-            resizeHitbox(tool)
-        end)
-        hitboxToggleBtn.Text = "Toggle Big Hitboxes: ON"
-    else
-        if hitboxConnection then
-            hitboxConnection:Disconnect()
-            hitboxConnection = nil
-        end
-        hitboxToggleBtn.Text = "Toggle Big Hitboxes: OFF"
-    end
-end
-
--- Tool automation
 local toolKeybinds = {
     ["Clockwork Hammer"] = Enum.KeyCode.R,
     ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
@@ -112,35 +16,57 @@ for toolName in pairs(toolKeybinds) do
     toolToggleStates[toolName] = false
 end
 
-local runningToolAutomation = false
+local hitboxExtenderEnabled = false
+local toolAutomationEnabled = false
 
-local function updateStatusText()
-    local lines = {}
-    for toolName, isEnabled in pairs(toolToggleStates) do
-        local color = isEnabled and "00ff00" or "ff0000"
-        table.insert(lines, `<font color="#{color}">{toolName}: {isEnabled and "ON" or "OFF"}</font>`)
+-- Hitbox resize function
+local function resizeHitbox(tool)
+    local hitbox = tool:FindFirstChild("Hitbox")
+    if hitbox and hitbox:IsA("BasePart") then
+        hitbox.Size = Vector3.new(50, 50, 50)
+        hitbox.CFrame = tool.CFrame
+        hitbox.CanCollide = false
+        hitbox.Anchored = true
+        hitbox.Transparency = 0.7
+        print("Resized hitbox:", tool.Name)
+    else
+        print("No hitbox found in tool:", tool.Name)
     end
-    statusLabel.Text = table.concat(lines, "\n")
 end
-updateStatusText()
 
-local function setToolAutomation(state)
-    runningToolAutomation = state
-    if runningToolAutomation then
-        automationToggleBtn.Text = "Toggle Tool Automation: ON"
+-- Toggle hitbox extender ON/OFF
+local function toggleHitboxExtender()
+    hitboxExtenderEnabled = not hitboxExtenderEnabled
+    print("Hitbox extender enabled:", hitboxExtenderEnabled)
+    if hitboxExtenderEnabled then
+        for _, tool in pairs(toolsFolder:GetChildren()) do
+            resizeHitbox(tool)
+        end
+        -- Listen for new tools added
+        toolsFolder.ChildAdded:Connect(function(tool)
+            if hitboxExtenderEnabled then
+                resizeHitbox(tool)
+            end
+        end)
+    end
+end
+
+-- Toggle tool automation ON/OFF
+local function toggleToolAutomation()
+    toolAutomationEnabled = not toolAutomationEnabled
+    print("Tool automation enabled:", toolAutomationEnabled)
+
+    if toolAutomationEnabled then
         task.spawn(function()
-            while runningToolAutomation do
+            while toolAutomationEnabled do
                 local character = LocalPlayer.Character
                 if character then
-                    for toolName, isEnabled in pairs(toolToggleStates) do
-                        if isEnabled then
+                    for toolName, enabled in pairs(toolToggleStates) do
+                        if enabled then
                             local tool = character:FindFirstChild(toolName)
                             if tool then
-                                local args = {
-                                    [1] = tool,
-                                    [2] = false
-                                }
-                                workspace.Remotes.UseItem:FireServer(unpack(args))
+                                workspace.Remotes.UseItem:FireServer(tool, false)
+                                print("Used tool:", toolName)
                             end
                         end
                     end
@@ -148,27 +74,30 @@ local function setToolAutomation(state)
                 task.wait(0.1)
             end
         end)
-    else
-        automationToggleBtn.Text = "Toggle Tool Automation: OFF"
     end
 end
 
--- Button clicks
-hitboxToggleBtn.MouseButton1Click:Connect(function()
-    setHitboxRunning(not runningHitbox)
-end)
-
-automationToggleBtn.MouseButton1Click:Connect(function()
-    setToolAutomation(not runningToolAutomation)
-end)
-
--- Keybind toggle for tools
+-- Listen for key presses to toggle tool use
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    for toolName, keyCode in pairs(toolKeybinds) do
-        if input.KeyCode == keyCode then
+    local key = input.KeyCode
+    for toolName, bind in pairs(toolKeybinds) do
+        if key == bind then
             toolToggleStates[toolName] = not toolToggleStates[toolName]
-            updateStatusText()
+            print(toolName, "toggled to", toolToggleStates[toolName] and "ON" or "OFF")
         end
     end
+
+    -- Hitbox extender toggle key: H
+    if key == Enum.KeyCode.H then
+        toggleHitboxExtender()
+    end
+
+    -- Tool automation toggle key: J
+    if key == Enum.KeyCode.J then
+        toggleToolAutomation()
+    end
 end)
+
+print("Script loaded. Press H to toggle hitbox extender, J to toggle tool automation.")
+print("Press R, T, Y, F, G to toggle individual tools on/off.")
