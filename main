@@ -1,14 +1,10 @@
--- Load Kavo UI
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptco/KnifeHub/main/UILib.lua"))()
-local Window = Library.CreateLib("StudLand V2 - Tool Keybinds", "Ocean")
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
--- Tool + keybind mapping
+-- Tool names and their corresponding keybinds
 local toolKeybinds = {
     ["Clockwork Hammer"] = Enum.KeyCode.R,
     ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
@@ -17,47 +13,42 @@ local toolKeybinds = {
     ["Pruning Shears"] = Enum.KeyCode.G,
 }
 
--- State tracking
-local loopStates = {}
-local labelReferences = {}
+-- Toggle state for each tool
+local toolToggleStates = {}
 
--- Create GUI tab and section
-local tab = Window:NewTab("Hotkey Loops")
-local section = tab:NewSection("Tool Statuses")
-
--- Create labels for each tool
-for toolName, keyCode in pairs(toolKeybinds) do
-    loopStates[toolName] = false
-    labelReferences[toolName] = section:NewLabel(toolName .. ": [DISABLED] (Key: " .. keyCode.Name .. ")")
+-- Initialize toggle states
+for toolName in pairs(toolKeybinds) do
+    toolToggleStates[toolName] = false
 end
 
--- Handle input
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
+-- Handle input to toggle tools
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
 
     for toolName, keyCode in pairs(toolKeybinds) do
         if input.KeyCode == keyCode then
-            loopStates[toolName] = not loopStates[toolName]
-            local status = loopStates[toolName] and "ENABLED" or "DISABLED"
-            labelReferences[toolName]:UpdateLabel(toolName .. ": [" .. status .. "] (Key: " .. keyCode.Name .. ")")
+            toolToggleStates[toolName] = not toolToggleStates[toolName]
+            print(`[Toggle] {toolName} is now {toolToggleStates[toolName] and "ON" or "OFF"}`)
         end
     end
 end)
 
--- Loop logic
-task.spawn(function()
-    while true do
-        local char = LocalPlayer.Character
-        if char then
-            for toolName, enabled in pairs(loopStates) do
-                if enabled then
-                    local tool = char:FindFirstChild(toolName)
-                    if tool then
-                        workspace.Remotes.UseItem:FireServer(tool, false)
-                    end
+-- Loop through all tools and use the enabled ones
+while true do
+    for toolName, isEnabled in pairs(toolToggleStates) do
+        if isEnabled then
+            local character = LocalPlayer.Character
+            if character then
+                local tool = character:FindFirstChild(toolName)
+                if tool then
+                    local args = {
+                        [1] = tool,
+                        [2] = false
+                    }
+                    workspace.Remotes.UseItem:FireServer(unpack(args))
                 end
             end
         end
-        task.wait(0.1)
     end
-end)
+    task.wait(0.1)
+end
