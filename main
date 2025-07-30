@@ -12,9 +12,10 @@ local toolNames = {
     ["Pruning Shears"] = Enum.KeyCode.G,
 }
 
--- Track toggle status for each tool
 local loopEnabledForTool = {}
+local originalHitboxSizes = {}
 
+-- Create ScreenGui and frame
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ToolLoopStatusGui"
 screenGui.ResetOnSpawn = false
@@ -49,9 +50,37 @@ for toolName, _ in pairs(toolNames) do
     loopEnabledForTool[toolName] = false
 end
 
+local function setHitboxSize(toolName, size)
+    local hitbox = workspace:FindFirstChild("CrimsonsMoons") 
+                   and workspace.CrimsonsMoons:FindFirstChild(toolName) 
+                   and workspace.CrimsonsMoons[toolName]:FindFirstChild("Hitbox")
+    if hitbox and hitbox:IsA("BasePart") then
+        hitbox.Size = size
+    end
+end
+
+local function toggleHitbox(toolName, enabled)
+    local hitbox = workspace:FindFirstChild("CrimsonsMoons") 
+                   and workspace.CrimsonsMoons:FindFirstChild(toolName) 
+                   and workspace.CrimsonsMoons[toolName]:FindFirstChild("Hitbox")
+    if hitbox and hitbox:IsA("BasePart") then
+        if not originalHitboxSizes[toolName] then
+            originalHitboxSizes[toolName] = hitbox.Size
+        end
+        
+        if enabled then
+            setHitboxSize(toolName, Vector3.new(50, 50, 50))
+        else
+            setHitboxSize(toolName, originalHitboxSizes[toolName])
+        end
+    end
+end
+
 local function ToggleLoopForTool(toolName)
     loopEnabledForTool[toolName] = not loopEnabledForTool[toolName]
     statusLabels[toolName].Text = toolName .. ": " .. (loopEnabledForTool[toolName] and "ON" or "OFF")
+
+    toggleHitbox(toolName, loopEnabledForTool[toolName])
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -64,7 +93,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Run loop to fire remote for enabled tools
+-- Loop that fires remote for enabled tools
 spawn(function()
     while true do
         for toolName, enabled in pairs(loopEnabledForTool) do
