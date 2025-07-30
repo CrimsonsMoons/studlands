@@ -1,110 +1,54 @@
--- Load Kavo UI (if not already loaded)
+-- Load Kavo UI if not already loaded
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptco/UILib/main/KavoUI.lua"))()
-local Window = Library.CreateLib("Tool Toggler", "Sentinel")
+local Window = Library.CreateLib("Tool Utilities", "Sentinel")
 
--- Tab & Section
-local Tab = Window:NewTab("Automation")
-local Section = Tab:NewSection("Tool Toggler")
+local Tab = Window:NewTab("Hitbox")
+local Section = Tab:NewSection("Hitbox Extender")
 
--- Roblox services
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local toolsFolder = workspace:WaitForChild("CrimsonsMoons")
 
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
--- Tool keybinds
-local toolKeybinds = {
-    ["Clockwork Hammer"] = Enum.KeyCode.R,
-    ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
-    ["Steel Axe"] = Enum.KeyCode.Y,
-    ["Steel Shovel"] = Enum.KeyCode.F,
-    ["Pruning Shears"] = Enum.KeyCode.G,
-}
-
--- Tool toggle states
-local toolToggleStates = {}
-for toolName in pairs(toolKeybinds) do
-    toolToggleStates[toolName] = false
-end
-
--- Status GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ToolToggleStatus"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.Parent = PlayerGui
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "StatusLabel"
-statusLabel.Size = UDim2.new(0, 300, 0, 180)
-statusLabel.Position = UDim2.new(0, 10, 0, 10)
-statusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-statusLabel.BackgroundTransparency = 0.2
-statusLabel.BorderSizePixel = 0
-statusLabel.TextColor3 = Color3.new(1, 1, 1)
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.TextYAlignment = Enum.TextYAlignment.Top
-statusLabel.Font = Enum.Font.Code
-statusLabel.TextSize = 16
-statusLabel.RichText = true
-statusLabel.TextWrapped = true
-statusLabel.Text = "Tool Status"
-statusLabel.Parent = screenGui
-
--- Update tool GUI
-local function updateStatusText()
-    local lines = {}
-    for toolName, isEnabled in pairs(toolToggleStates) do
-        local color = isEnabled and "00ff00" or "ff0000"
-        table.insert(lines, `<font color="#{color}">{toolName}: {isEnabled and "ON" or "OFF"}</font>`)
-    end
-    statusLabel.Text = table.concat(lines, "\n")
-end
-
-updateStatusText()
-
--- Keybind input toggle
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    for toolName, keyCode in pairs(toolKeybinds) do
-        if input.KeyCode == keyCode then
-            toolToggleStates[toolName] = not toolToggleStates[toolName]
-            updateStatusText()
-        end
-    end
-end)
-
--- Toggle state
 local running = false
+local connection = nil -- for ChildAdded event
 
--- Toggle button in GUI
-Section:NewButton("Toggle Tool Automation", "Turns tool usage loop ON/OFF", function()
-    running = not running
-    if running then
-        print("Tool automation: ON")
-        task.spawn(function()
-            while running do
-                for toolName, isEnabled in pairs(toolToggleStates) do
-                    if isEnabled then
-                        local character = LocalPlayer.Character
-                        if character then
-                            local tool = character:FindFirstChild(toolName)
-                            if tool then
-                                local args = {
-                                    [1] = tool,
-                                    [2] = false
-                                }
-                                workspace.Remotes.UseItem:FireServer(unpack(args))
-                            end
-                        end
-                    end
-                end
-                task.wait(0.1)
-            end
-        end)
+local function resizeHitbox(tool)
+    local hitbox = tool:FindFirstChild("Hitbox")
+    if hitbox and hitbox:IsA("BasePart") then
+        hitbox.Size = Vector3.new(50, 50, 50)
+        hitbox.CFrame = tool.CFrame
+        hitbox.CanCollide = false
+        hitbox.Anchored = true
+        -- Optional: Transparency so you don't see it (if you want)
+        hitbox.Transparency = 0.7
+        print("Resized hitbox for tool:", tool.Name)
     else
-        print("Tool automation: OFF")
+        warn("No valid hitbox found for tool:", tool.Name)
     end
+end
+
+-- Function to enable or disable auto hitbox resize
+local function setRunning(state)
+    running = state
+    if running then
+        -- Resize existing tools
+        for _, tool in pairs(toolsFolder:GetChildren()) do
+            resizeHitbox(tool)
+        end
+        -- Listen for new tools
+        connection = toolsFolder.ChildAdded:Connect(function(tool)
+            resizeHitbox(tool)
+        end)
+        print("Hitbox extender: ON")
+    else
+        -- Disconnect event to stop auto resizing new tools
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+        print("Hitbox extender: OFF")
+    end
+end
+
+-- Create toggle button in GUI
+Section:NewToggle("Toggle Big Hitboxes", "Make all tool hitboxes huge and keep updating new ones", function(value)
+    setRunning(value)
 end)
