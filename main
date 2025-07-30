@@ -1,65 +1,59 @@
 -- Load Kavo UI
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptco/KnifeHub/main/UILib.lua"))()
-local Window = Library.CreateLib("StudLand V2 - Tool Loops", "Ocean")
+local Window = Library.CreateLib("StudLand V2 - Keybind Loops", "Ocean")
 
-local toolLoops = {}
-local toggles = {}
-local toolNames = {
-    "Clockwork Hammer",
-    "Scarletsteel Pickaxe",
-    "Steel Axe",
-    "Steel Shovel",
-    "Pruning Shears"
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Tool keybind mappings
+local toolKeybinds = {
+    ["Clockwork Hammer"] = Enum.KeyCode.R,
+    ["Scarletsteel Pickaxe"] = Enum.KeyCode.T,
+    ["Steel Axe"] = Enum.KeyCode.Y,
+    ["Steel Shovel"] = Enum.KeyCode.F,
+    ["Pruning Shears"] = Enum.KeyCode.G,
 }
 
--- Create Tab
-local tab = Window:NewTab("Auto Use")
-local section = tab:NewSection("Toggle Tool Auto-Use")
+-- Status tracking
+local loopStates = {}
+local labelReferences = {}
 
--- Create toggle for each tool
-for _, toolName in pairs(toolNames) do
-    toolLoops[toolName] = false
-    section:NewToggle(toolName, "Auto use " .. toolName, function(state)
-        toolLoops[toolName] = state
-    end)
+-- GUI setup
+local tab = Window:NewTab("Tool Keybinds")
+local section = tab:NewSection("Status by Hotkey")
+
+for toolName, key in pairs(toolKeybinds) do
+    loopStates[toolName] = false
+    labelReferences[toolName] = section:NewLabel(toolName .. ": [DISABLED] (Key: " .. key.Name .. ")")
 end
 
--- Combo toggle
-local comboLoop = false
-section:NewToggle("Combo Mode", "Loop all tools at once", function(state)
-    comboLoop = state
+-- Keybind logic
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    for toolName, keyCode in pairs(toolKeybinds) do
+        if input.KeyCode == keyCode then
+            loopStates[toolName] = not loopStates[toolName]
+            local status = loopStates[toolName] and "ENABLED" or "DISABLED"
+            labelReferences[toolName]:UpdateLabel(toolName .. ": [" .. status .. "] (Key: " .. keyCode.Name .. ")")
+        end
+    end
 end)
 
--- Loop execution
+-- Loop executor
 task.spawn(function()
-    while task.wait(0.1) do
-        local char = game.Players.LocalPlayer.Character
-        if comboLoop then
-            for _, toolName in pairs(toolNames) do
+    while true do
+        for toolName, isActive in pairs(loopStates) do
+            if isActive then
+                local char = LocalPlayer.Character
                 local tool = char and char:FindFirstChild(toolName)
                 if tool then
                     workspace.Remotes.UseItem:FireServer(tool, false)
                 end
             end
-        else
-            for _, toolName in pairs(toolNames) do
-                if toolLoops[toolName] then
-                    local tool = char and char:FindFirstChild(toolName)
-                    if tool then
-                        workspace.Remotes.UseItem:FireServer(tool, false)
-                    end
-                end
-            end
         end
+        task.wait(0.1)
     end
-end)
-
--- Optional: Add tabs for utilities
-local miscTab = Window:NewTab("Utilities")
-local miscSec = miscTab:NewSection("Extras")
-miscSec:NewButton("SimpleSpy", "Load Remote Spy", function()
-    loadstring(game:HttpGet("https://github.com/exxtremestuffs/SimpleSpySource/raw/master/SimpleSpy.lua"))()
-end)
-miscSec:NewButton("Infinite Yield", "Load Admin Commands", function()
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
 end)
