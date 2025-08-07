@@ -1942,7 +1942,7 @@ run(function()
 		Name = 'Speed',
 		Min = 1,
 		Max = 1500,
-		Default = 50,
+		Default = 150,
 		Suffix = function(val)
 			return val == 1 and 'stud' or 'studs'
 		end
@@ -1951,7 +1951,7 @@ run(function()
 		Name = 'Vertical Speed',
 		Min = 1,
 		Max = 1500,
-		Default = 50,
+		Default = 100,
 		Suffix = function(val)
 			return val == 1 and 'stud' or 'studs'
 		end
